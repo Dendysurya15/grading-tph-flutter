@@ -19,6 +19,8 @@ abstract class Predictor {
   /// The stream of the frames per second (FPS) rate.
   Stream<double>? get fpsRate => ultralyticsYoloPlatform.fpsRateStream;
 
+  Stream<int>? get objectCount => ultralyticsYoloPlatform.objectCountStream;
+
   /// Loads the model.
   Future<String?> loadModel({bool useGpu = false}) =>
       ultralyticsYoloPlatform.loadModel(model.toJson(), useGpu: useGpu);
