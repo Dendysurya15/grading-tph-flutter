@@ -19,7 +19,7 @@ class UltralyticsYoloCameraPreview extends StatefulWidget {
     this.boundingBoxesColorList = const [Colors.lightBlueAccent],
     this.classificationOverlay,
     this.loadingPlaceholder,
-    // this.onObjectCountChanged, // Add the callback to the constructor
+    required this.objectCountNotifier, // Add this line
     super.key,
   });
 
@@ -41,7 +41,7 @@ class UltralyticsYoloCameraPreview extends StatefulWidget {
   /// The placeholder widget displayed while the predictor is loading.
   final Widget? loadingPlaceholder;
 
-  // final void Function(int)? onObjectCountChanged; // Declare the callback
+  final ValueNotifier<int> objectCountNotifier; // Add this line
 
   @override
   State<UltralyticsYoloCameraPreview> createState() =>
@@ -117,10 +117,16 @@ class _UltralyticsYoloCameraPreviewState
                       AsyncSnapshot<List<DetectedObject?>?> snapshot,
                     ) {
                       if (snapshot.data == null) return Container();
-// Count detected objects
+                      // Count detected objects
                       final detectedObjects =
                           snapshot.data! as List<DetectedObject>;
                       final objectCount = detectedObjects.length;
+
+                      print('Number of detected objects: $objectCount');
+                      // WidgetsBinding.instance.addPostFrameCallback((_) {
+                      //   widget.onObjectCountChanged(objectCount);
+                      // });
+                      widget.objectCountNotifier.value = objectCount;
 
                       return CustomPaint(
                         painter: ObjectDetectorPainter(

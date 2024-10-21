@@ -10,7 +10,9 @@ import 'package:ultralytics_yolo/ultralytics_yolo.dart';
 import 'package:ultralytics_yolo/yolo_model.dart';
 import 'package:ultralytics_yolo_example/app/data/services/shared_preferences_service.dart';
 import 'package:ultralytics_yolo_example/app/utils/preferences_keys.dart';
+import 'package:ultralytics_yolo_example/app/views/image_preview.dart';
 import 'package:screenshot/screenshot.dart'; // Import the screenshot package
+import 'package:image/image.dart' as img; // Import the image package
 
 class TakePhotoPage extends StatefulWidget {
   const TakePhotoPage({super.key});
@@ -23,6 +25,29 @@ class _TakePhotoPageState extends State<TakePhotoPage> {
   final controller = UltralyticsYoloCameraController();
   final ScreenshotController screenshotController =
       ScreenshotController(); // Create a ScreenshotController
+
+  int _objectCount = 0;
+  ValueNotifier<int> objectCountNotifier = ValueNotifier<int>(0);
+
+  @override
+  void initState() {
+    super.initState();
+    // Check permissions when the page is initialized
+    _checkPermissions();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Optionally check permissions here if needed
+  }
+
+  @override
+  void dispose() {
+    controller
+        .dispose(); // Dispose of the controller when the widget is disposed
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,6 +86,8 @@ class _TakePhotoPageState extends State<TakePhotoPage> {
                       onCameraCreated: () {
                         predictor.loadModel(useGpu: true);
                       },
+                      objectCountNotifier:
+                          objectCountNotifier, // Pass the notifier here
                     ),
                   ),
                   Positioned(
@@ -83,13 +110,22 @@ class _TakePhotoPageState extends State<TakePhotoPage> {
                       },
                     ),
                   ),
+                  // StreamBuilder<int>(
+                  //   stream: predictor.objectCount,
+                  //   builder: (context, snapshot) {
+                  //     // Update _objectCount without returning any UI
+                  //     _objectCount = snapshot.data ?? 0; // Update _objectCount
+                  //     return const SizedBox.shrink(); // Return an empty widget
+                  //   },
+                  // ),
                   Align(
                     alignment: Alignment.bottomCenter,
                     child: Padding(
                       padding: const EdgeInsets.only(bottom: 20),
                       child: FloatingActionButton(
                         onPressed: () async {
-                          // Capture screenshot
+                          objectCountNotifier.value =
+                              _objectCount; // Update the state
                           await _captureScreenshot(context);
                         },
                         child: const Icon(Icons.camera),
@@ -114,10 +150,7 @@ class _TakePhotoPageState extends State<TakePhotoPage> {
 
   Future<void> _captureScreenshot(BuildContext context) async {
     try {
-      // Get the external storage directory
       final io.Directory? externalDir = await getExternalStorageDirectory();
-
-      // Check if externalDir is not null
       if (externalDir == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Could not access external storage')),
@@ -125,64 +158,50 @@ class _TakePhotoPageState extends State<TakePhotoPage> {
         return;
       }
 
-      // Create a directory for your app if it doesn't exist
       final io.Directory appDir = io.Directory(
           '${externalDir.path}/Pictures/com.ultralytics.ultralytics_yolo_example');
-      await appDir.create(
-          recursive: true); // Create the directory if it doesn't exist
-
-      // Create a unique file name for the screenshot
+      await appDir.create(recursive: true);
       final String fileName =
           'screenshot_${DateTime.now().millisecondsSinceEpoch}.png';
 
-      // Capture the screenshot
       final Uint8List? capturedImage = await screenshotController.capture();
-
       if (capturedImage != null) {
+        final int currentCount = objectCountNotifier.value;
         // Add watermark to the captured image
         final Uint8List watermarkedImage =
-            await _addWatermark(capturedImage, 'Objects:');
+            await _addWatermark(capturedImage, 'Jumlah Janjang: $currentCount');
 
-        // Save the watermarked screenshot to the specified path
+        // Compress the image
+        final Uint8List compressedImage =
+            await _compressImage(watermarkedImage);
+
+        // Save the compressed screenshot to the specified path
         final io.File file = io.File('${appDir.path}/$fileName');
-        await file.writeAsBytes(watermarkedImage);
-
-        // Optionally show a confirmation message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Screenshot saved: ${file.path}')),
-        );
-
-        // Show the screenshot preview in a dialog
-        showDialog(
-          context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: const Text('Screenshot Preview'),
-              content: SizedBox(
-                width: double.maxFinite,
-                height: 300, // Adjust height as needed
-                child: Image.memory(
-                  watermarkedImage, // Use the watermarked image
-                  fit: BoxFit.cover,
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Close'),
-                ),
-              ],
-            );
-          },
+        await file.writeAsBytes(compressedImage);
+        // await controller.closeCamera();
+        // Navigate to the PreviewScreen with the captured image
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => PreviewScreen(imageBytes: compressedImage),
+          ),
         );
       }
     } catch (e) {
-      // Handle any errors that occur during the screenshot capture
       print('Error capturing screenshot: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Error capturing screenshot')),
       );
     }
+  }
+
+  Future<Uint8List> _compressImage(Uint8List imageBytes) async {
+    // Decode the image to an img.Image object
+    img.Image originalImage = img.decodeImage(imageBytes)!;
+
+    // Compress the image using JPEG with a quality parameter
+    List<int> compressedImageBytes = img.encodeJpg(originalImage, quality: 85);
+
+    return Uint8List.fromList(compressedImageBytes);
   }
 
   // Function to add watermark to the image
@@ -200,10 +219,10 @@ class _TakePhotoPageState extends State<TakePhotoPage> {
     // Draw the original image on the canvas
     canvas.drawImage(image, ui.Offset.zero, ui.Paint());
 
-    // Set watermark style
+    // Set watermark style with larger font size and yellow color
     final TextStyle style = const TextStyle(
-      color: Colors.white,
-      fontSize: 30,
+      color: Colors.yellow, // Change color to yellow
+      fontSize: 50, // Increase font size
       fontWeight: FontWeight.bold,
     );
     final TextSpan span = TextSpan(text: watermarkText, style: style);

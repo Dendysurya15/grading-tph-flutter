@@ -90,7 +90,7 @@ class PlatformChannelUltralyticsYolo implements UltralyticsYoloPlatform {
             objects.add(DetectedObject.fromJson(json));
           }
 
-          print("aksjdfklajsdfkl $objects");
+          // print("aksjdfklajsdfkl $objects");
 
           return objects;
         },

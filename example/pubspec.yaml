@@ -29,6 +29,7 @@ dependencies:
   cross_file: ^0.3.4+2
   image_picker: ^1.1.2
   screenshot: ^3.0.0
+  image: ^4.3.0
 
 dev_dependencies:
   flutter_test:
