@@ -19,6 +19,7 @@ class UltralyticsYoloCameraPreview extends StatefulWidget {
     this.boundingBoxesColorList = const [Colors.lightBlueAccent],
     this.classificationOverlay,
     this.loadingPlaceholder,
+    // this.onObjectCountChanged, // Add the callback to the constructor
     super.key,
   });
 
@@ -39,6 +40,8 @@ class UltralyticsYoloCameraPreview extends StatefulWidget {
 
   /// The placeholder widget displayed while the predictor is loading.
   final Widget? loadingPlaceholder;
+
+  // final void Function(int)? onObjectCountChanged; // Declare the callback
 
   @override
   State<UltralyticsYoloCameraPreview> createState() =>
@@ -114,6 +117,10 @@ class _UltralyticsYoloCameraPreviewState
                       AsyncSnapshot<List<DetectedObject?>?> snapshot,
                     ) {
                       if (snapshot.data == null) return Container();
+// Count detected objects
+                      final detectedObjects =
+                          snapshot.data! as List<DetectedObject>;
+                      final objectCount = detectedObjects.length;
 
                       return CustomPaint(
                         painter: ObjectDetectorPainter(

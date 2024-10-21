@@ -109,7 +109,7 @@ abstract class UltralyticsYoloPlatform extends PlatformInterface {
     throw UnimplementedError('fpsRateStream has not been implemented.');
   }
 
-  /// Stream of count how many object has been detected
+// / Stream of count how many object has been detected
   Stream<int>? get objectCountStream {
     throw UnimplementedError('objectCountStream has not been implemented.');
   }
