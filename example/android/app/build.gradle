@@ -26,8 +26,8 @@ apply plugin: 'kotlin-android'
 apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
 
 android {
-    compileSdkVersion 34
-    ndkVersion flutter.ndkVersion
+    compileSdkVersion 34 // Updated to the latest stable version
+    ndkVersion localProperties.getProperty('flutter.ndkVersion') // Ensure NDK version is set from local.properties
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -35,25 +35,31 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId "com.ultralytics.ultralytics_yolo_example"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-build-configuration.
-        minSdkVersion 26
-        targetSdkVersion flutter.targetSdkVersion
+        minSdkVersion 26 // Ensure this meets camera requirements
+        targetSdkVersion 34 // Use the latest stable version
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.debug // Add your own signing config for release builds
         }
     }
 }
 
 flutter {
     source '../..'
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version" // Ensure Kotlin standard library is included
+    implementation 'androidx.camera:camera-core:1.0.2' // Camera dependencies, update as necessary
+    implementation 'androidx.camera:camera-camera2:1.0.2'
+    implementation 'androidx.camera:camera-lifecycle:1.0.2'
+    implementation 'androidx.camera:camera-view:1.0.2'
+
+    // Include MultiDex if you have a large number of methods
+    implementation 'androidx.multidex:multidex:2.0.1' 
 }

@@ -1,4 +1,4 @@
-import 'package:bbc_mobile/app/data/models/user_model.dart';
+import 'package:ultralytics_yolo_example/app/data/models/user_model.dart';
 
 class LoginModel {
   final int success;

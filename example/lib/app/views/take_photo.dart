@@ -167,9 +167,24 @@ class _TakePhotoPageState extends State<TakePhotoPage> {
       final Uint8List? capturedImage = await screenshotController.capture();
       if (capturedImage != null) {
         final int currentCount = objectCountNotifier.value;
-        // Add watermark to the captured image
-        final Uint8List watermarkedImage =
-            await _addWatermark(capturedImage, 'Jumlah Janjang: $currentCount');
+
+        // Retrieve additional data from shared preferences
+        final prefsManager = await SharedPreferencesManager.getInstance();
+        final selectedEst =
+            prefsManager.loadValue(PreferencesKeys.selectedEst) as String?;
+        final selectedAfd =
+            prefsManager.loadValue(PreferencesKeys.selectedAfd) as String?;
+        final nameBlok =
+            prefsManager.loadValue(PreferencesKeys.nameBlok) as String?;
+
+        // Add watermark with new text
+        final Uint8List watermarkedImage = await _addWatermark(
+          capturedImage,
+          currentCount,
+          selectedEst ?? 'Unknown Estate',
+          selectedAfd ?? 'Unknown Afdeling',
+          nameBlok ?? 'Unknown Blok',
+        );
 
         // Compress the image
         final Uint8List compressedImage =
@@ -178,7 +193,7 @@ class _TakePhotoPageState extends State<TakePhotoPage> {
         // Save the compressed screenshot to the specified path
         final io.File file = io.File('${appDir.path}/$fileName');
         await file.writeAsBytes(compressedImage);
-        // await controller.closeCamera();
+
         // Navigate to the PreviewScreen with the captured image
         Navigator.of(context).push(
           MaterialPageRoute(
@@ -194,19 +209,15 @@ class _TakePhotoPageState extends State<TakePhotoPage> {
     }
   }
 
-  Future<Uint8List> _compressImage(Uint8List imageBytes) async {
-    // Decode the image to an img.Image object
-    img.Image originalImage = img.decodeImage(imageBytes)!;
-
-    // Compress the image using JPEG with a quality parameter
-    List<int> compressedImageBytes = img.encodeJpg(originalImage, quality: 85);
-
-    return Uint8List.fromList(compressedImageBytes);
-  }
-
+// Function to add watermark to the image
   // Function to add watermark to the image
   Future<Uint8List> _addWatermark(
-      Uint8List imageBytes, String watermarkText) async {
+    Uint8List imageBytes,
+    int objectCount,
+    String estate,
+    String afdeling,
+    String blokName,
+  ) async {
     // Load the image
     final ui.Codec codec = await ui.instantiateImageCodec(imageBytes);
     final ui.FrameInfo frameInfo = await codec.getNextFrame();
@@ -219,25 +230,34 @@ class _TakePhotoPageState extends State<TakePhotoPage> {
     // Draw the original image on the canvas
     canvas.drawImage(image, ui.Offset.zero, ui.Paint());
 
-    // Set watermark style with larger font size and yellow color
+    // Define watermark text
+    final String watermarkText =
+        'Estate: $estate\nAfdeling: $afdeling\nBlok: $blokName\nJanjang Terdeteksi: $objectCount buah';
+
+    // Set watermark style
     final TextStyle style = const TextStyle(
-      color: Colors.yellow, // Change color to yellow
-      fontSize: 50, // Increase font size
+      color: Colors.yellow, // Yellow color
+      fontSize: 50, // Larger font size
       fontWeight: FontWeight.bold,
     );
     final TextSpan span = TextSpan(text: watermarkText, style: style);
     final TextPainter painter = TextPainter(
       text: span,
-      textAlign: TextAlign.left,
+      textAlign: TextAlign.right,
       textDirection: ui.TextDirection.ltr,
     );
     painter.layout();
 
-    // Position the watermark in the bottom right corner
-    painter.paint(
-        canvas,
-        ui.Offset(image.width - painter.width - 10,
-            image.height - painter.height - 10));
+    // Define the right and bottom margins
+    const double rightMargin = 50.0; // Margin from the right edge
+    const double bottomMargin = 50.0; // Margin from the bottom edge
+
+    // Position the watermark text in the bottom-right corner with margin
+    final double offsetX = image.width - painter.width - rightMargin;
+    final double offsetY = image.height - painter.height - bottomMargin;
+
+    // Paint the watermark on the canvas with the calculated offsets
+    painter.paint(canvas, ui.Offset(offsetX, offsetY));
 
     // End recording and convert to image
     final ui.Image watermarkedImage =
@@ -247,6 +267,17 @@ class _TakePhotoPageState extends State<TakePhotoPage> {
 
     return pngBytes!.buffer.asUint8List();
   }
+
+  Future<Uint8List> _compressImage(Uint8List imageBytes) async {
+    // Decode the image to an img.Image object
+    img.Image originalImage = img.decodeImage(imageBytes)!;
+
+    // Compress the image using JPEG with a quality parameter
+    List<int> compressedImageBytes = img.encodeJpg(originalImage, quality: 85);
+
+    return Uint8List.fromList(compressedImageBytes);
+  }
+  // Function to add watermark to the image
 
   Future<ObjectDetector> _initObjectDetectorWithLocalModel() async {
     final prefsManager = await SharedPreferencesManager.getInstance();
